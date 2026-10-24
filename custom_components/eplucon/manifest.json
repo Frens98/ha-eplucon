@@ -1,6 +1,7 @@
 {
   "domain": "eplucon",
   "name": "Eplucon",
+  "categories": ["climate.thermostats_heating"],
   "codeowners": ["@Frens98"],
   "config_flow": true,
   "dependencies": ["sensor"],
