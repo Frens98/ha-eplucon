@@ -13,6 +13,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry
 
@@ -29,6 +30,8 @@ from .const import (
     CONF_API_TOKEN,
     CONF_API_ENDPOINT,
     CONF_USE_MOCK_DATA,
+    CONF_PORTAL_USERNAME,
+    CONF_PORTAL_PASSWORD,
     DEFAULT_SCAN_INTERVAL,
 )
 from .eplucon_api.eplucon_client import (
@@ -38,6 +41,7 @@ from .eplucon_api.eplucon_client import (
     DeviceDTO,
     BASE_URL,
 )
+from .eplucon_api.portal_client import EpluconPortalClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -334,6 +338,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    portal_username = entry.data.get(CONF_PORTAL_USERNAME)
+    portal_password = entry.data.get(CONF_PORTAL_PASSWORD)
+    if portal_username and portal_password and not use_mock_data:
+        portal_session = aiohttp_client.async_create_clientsession(
+            hass,
+            cookie_jar=aiohttp.CookieJar(),
+        )
+        portal_client = EpluconPortalClient(
+            portal_session,
+            portal_username,
+            portal_password,
+        )
+        hass.data[DOMAIN].setdefault("portal_clients", {})[entry.entry_id] = portal_client
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Registered last: the migrations above update the entry themselves.
@@ -378,6 +396,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     if unload_ok:
+        portal_client = hass.data[DOMAIN].get("portal_clients", {}).pop(
+            entry.entry_id, None
+        )
+        if portal_client:
+            await portal_client.async_close()
         hass.data[DOMAIN].pop(entry.entry_id, None)
 
     return unload_ok

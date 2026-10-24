@@ -1,4 +1,4 @@
-# Home Assistant Eplucon Integration
+# Home Assistant Eplucon Integration — zone control fork
 
 This custom integration allows you to integrate your Eplucon devices into Home Assistant, providing access to real-time data and sensor values.
 
@@ -6,7 +6,9 @@ This custom integration allows you to integrate your Eplucon devices into Home A
 
 - Monitor indoor temperature, vent RPM, brine circulation pump, and more in real-time.
 - Expose per-zone control panels of a zone controller (th-TOUCH) as devices, with
-  temperature, humidity, battery, signal and call-for-heat sensors (read-only).
+  temperature, humidity, battery, signal and call-for-heat sensors.
+- Optionally expose each zone as a climate entity so Home Assistant can change
+  its target temperature.
 - Automatically update sensor data using Home Assistant's update coordinator.
 
 ## Installation
@@ -14,14 +16,13 @@ This custom integration allows you to integrate your Eplucon devices into Home A
 ### HACS (Home Assistant Community Store)
 
 1. Ensure you have [HACS](https://hacs.xyz/) installed in your Home Assistant instance.
-2. Open HACS, go to the "Integrations" tab, and click on the "+" button to add a new repository.
-3. Search for "Eplucon" and install the integration.
-4. Restart Home Assistant.
+2. Add `https://github.com/Frens98/ha-eplucon` as a custom integration repository in HACS.
+3. Install this fork and restart Home Assistant.
 
 ### Manual Installation
 
-1. Download the latest release from the [GitHub releases page](https://github.com/koenhendriks/ha-eplucon/releases).
-2. Extract the `eplucon` folder into your `config/custom_components/` directory.
+1. Download the ZIP of the fork's [default branch](https://github.com/Frens98/ha-eplucon/archive/refs/heads/main.zip).
+2. Extract the `custom_components/eplucon` folder into your `config/custom_components/` directory.
 3. Restart Home Assistant.
 
 ## Configuration
@@ -38,7 +39,9 @@ To use this integration, you will need an API token from Eplucon. Follow these s
 
 1. Go to **Settings** > **Devices & Services** > **Add Integration**.
 2. Search for "Eplucon" and select it.
-3. Enter your API token and complete the setup.
+3. Enter your API token and complete the setup. For read-only sensors, that is all
+   you need. To enable room temperature control, expand **Room temperature control**
+   and enter the username and password used to sign in to the Eplucon portal.
 
 ### Step 3: Sensors and Entities
 
@@ -59,7 +62,7 @@ These sensors are automatically created based on the real-time information avail
 ### Zone control panels (th-TOUCH)
 
 If your installation includes a zone controller (`zones_system_controller`), each
-regulation zone / room is added as its own device with read-only entities:
+regulation zone / room is added as its own device with these entities:
 
 - **Temperature** (°C) and **Target Temperature** (°C)
 - **Humidity** (%)
@@ -72,10 +75,15 @@ Entities are named after their zone, so a zone called *Woonkamer* yields
 that drops out of the API (flat control-panel battery, lost wireless link) is
 reported as unavailable rather than as a zero or an `off`.
 
-These use the same API token; no extra credentials are required. Setting a zone's
-target temperature from Home Assistant is **not** supported: the Eplucon public API
-is read-only for zones, and the portal's write path needs a separate web login.
-See [`docs/zones-api.md`](docs/zones-api.md) for the full API investigation.
+Temperature control is optional and uses the portal's own web session route,
+which is undocumented. It needs the separate portal username and password in
+addition to the API token. Setting a target uses Eplucon's `constantTemp` route
+and may replace that room's scheduled mode with a constant setpoint; switch the
+room back to its schedule in the Eplucon app/portal when desired. If the portal
+changes its login or write route, sensor reading should keep working but climate
+control may need an update. See [`docs/zones-api.md`](docs/zones-api.md) for the
+API investigation and [`docs/zone-climate-control.md`](docs/zone-climate-control.md)
+for this fork's implementation notes.
 
 ### Screenshot
 
@@ -132,7 +140,7 @@ Contributions are welcome! If you'd like to contribute to this integration, plea
 
 ## Support
 
-If you have any issues or feature requests, please open an issue on the [GitHub Issues page](https://github.com/your-repo/eplucon/issues).
+If you have any issues or feature requests, please open an issue on the [GitHub Issues page](https://github.com/Frens98/ha-eplucon/issues).
 
 ## License
 

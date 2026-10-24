@@ -230,7 +230,11 @@ safest.
 - **Writes** (climate setpoint) need a **separate session-based path**: portal
   username + password, cookie jar, CSRF handling. This is a new dependency
   (credentials beyond the API token) and should be optional — read-only zone
-  entities still work with only the token.
+  entities still work with only the token. This fork implements that path as an
+  optional climate platform; each room's setpoint is sent using `constantTemp`.
+- `active_schedule=0` requests constant-temperature mode. The integration does
+  not currently switch a room back to its schedule automatically; use the Eplucon
+  app or portal to restore the schedule.
 - The write is inherently a cloud round-trip through the portal UI's own route;
   it may be more fragile than the documented API (CSRF token rotation, session
   expiry, login honeypot changes).

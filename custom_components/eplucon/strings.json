@@ -24,6 +24,20 @@
                         "data_description": {
                             "use_mock_data": "Read every value from the mock files bundled with the integration instead of the Eplucon API. No request is sent and the API token is ignored."
                         }
+                    },
+                    "zone_control": {
+                        "name": "Room temperature control (optional)",
+                        "description": "Reading sensors only needs the API token. To change a room setpoint, enter the Eplucon portal login. This uses an undocumented portal route and may stop working if Eplucon changes its website.",
+                        "data": {
+                            "portal_username": "Eplucon portal username",
+                            "portal_password": "Eplucon portal password",
+                            "remove_portal_credentials": "Remove saved portal credentials"
+                        },
+                        "data_description": {
+                            "portal_username": "Usually the email address used to sign in to the Eplucon portal.",
+                            "portal_password": "Stored in this Home Assistant config entry. Leave blank in options to keep the saved password.",
+                            "remove_portal_credentials": "Remove the saved username and password and disable climate controls."
+                        }
                     }
                 }
             }
@@ -32,7 +46,8 @@
             "auth": "Authentication failed. Please check your API token and/or API endpoint.",
             "api": "Failed to connect to the Eplucon API. Please check the API endpoint and try again or check the logs for more info.",
             "unknown": "An unexpected error occurred. Please try again or check the logs for more info.",
-            "no-devices": "No devices found. Ensure you're device is added to your Eplucon account"
+            "no-devices": "No devices found. Ensure you're device is added to your Eplucon account",
+            "zone-credentials": "Enter both the Eplucon portal username and password, or leave both empty."
         },
         "abort": {
             "single_instance_allowed": "Only a single instance of Eplucon is allowed."
@@ -62,6 +77,20 @@
                         "data_description": {
                             "use_mock_data": "Read every value from the mock files bundled with the integration instead of the Eplucon API. No request is sent and the API token is ignored."
                         }
+                    },
+                    "zone_control": {
+                        "name": "Room temperature control (optional)",
+                        "description": "Reading sensors only needs the API token. To change a room setpoint, enter the Eplucon portal login. This uses an undocumented portal route and may stop working if Eplucon changes its website.",
+                        "data": {
+                            "portal_username": "Eplucon portal username",
+                            "portal_password": "Eplucon portal password",
+                            "remove_portal_credentials": "Remove saved portal credentials"
+                        },
+                        "data_description": {
+                            "portal_username": "Usually the email address used to sign in to the Eplucon portal.",
+                            "portal_password": "Stored in this Home Assistant config entry. Leave blank in options to keep the saved password.",
+                            "remove_portal_credentials": "Remove the saved username and password and disable climate controls."
+                        }
                     }
                 }
             }
@@ -70,7 +99,8 @@
             "auth": "Authentication failed. Please check your API token and/or API endpoint.",
             "api": "Failed to connect to the Eplucon API. Please check the API endpoint and try again or check the logs for more info.",
             "unknown": "An unexpected error occurred. Please try again or check the logs for more info.",
-            "no-devices": "No devices found. Ensure you're device is added to your Eplucon account"
+            "no-devices": "No devices found. Ensure you're device is added to your Eplucon account",
+            "zone-credentials": "Enter both the Eplucon portal username and password, or leave both empty."
         }
     }
 }

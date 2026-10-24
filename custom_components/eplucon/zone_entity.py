@@ -26,20 +26,35 @@ class EpluconZoneEntity(CoordinatorEntity):
     # happened to return the zones in when the registry entries were created.
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, device: DeviceDTO, zone: ZoneDTO, entity_description) -> None:
+    def __init__(
+        self,
+        coordinator,
+        device: DeviceDTO,
+        zone: ZoneDTO,
+        entity_description=None,
+        entity_key: str = "entity",
+    ) -> None:
         super().__init__(coordinator)
         self._module_id = device.id
         self._module_index = device.account_module_index
         self._zone_id = zone.id
         self._zone_name = zone.name
-        # The name comes from entity_description; setting _attr_name as well
-        # would only duplicate it.
-        self.entity_description = entity_description
-        self._attr_unique_id = f"{device.id}_zone_{zone.id}_{entity_description.key}"
+        if entity_description is not None:
+            # The name comes from entity_description; setting _attr_name as
+            # well would only duplicate it.
+            self.entity_description = entity_description
+            self._attr_unique_id = (
+                f"{device.id}_zone_{zone.id}_{entity_description.key}"
+            )
+            entity_name = entity_description.name
+        else:
+            # Climate entities don't use EntityDescription in this integration.
+            self._attr_unique_id = f"{device.id}_zone_{zone.id}_{entity_key}"
+            entity_name = getattr(self, "_attr_name", entity_key)
 
         _LOGGER.debug(
             "Created zone entity %s for zone %s with unique_id %s",
-            entity_description.name,
+            entity_name,
             self._zone_name,
             self._attr_unique_id,
         )

@@ -5,6 +5,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import callback
 from homeassistant.helpers import aiohttp_client
+from homeassistant.helpers import selector
 from homeassistant.data_entry_flow import FlowResult, section
 from .const import (
     DOMAIN,
@@ -14,6 +15,10 @@ from .const import (
     CONF_API_ENDPOINT,
     CONF_DEVELOPER_OPTIONS,
     CONF_USE_MOCK_DATA,
+    CONF_ZONE_CONTROL,
+    CONF_PORTAL_USERNAME,
+    CONF_PORTAL_PASSWORD,
+    CONF_REMOVE_PORTAL_CREDENTIALS,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
@@ -23,11 +28,16 @@ from .eplucon_api.eplucon_client import EpluconApi, ApiAuthError, ApiError, BASE
 _LOGGER = logging.getLogger(__name__)
 
 
+class _InvalidZoneCredentials(Exception):
+    """The optional portal username/password pair is incomplete."""
+
+
 def build_schema(
     api_token: Optional[str] = None,
     api_endpoint: str = BASE_URL,
     use_mock_data: bool = False,
     scan_interval: int = DEFAULT_SCAN_INTERVAL,
+    portal_username: str = "",
 ) -> vol.Schema:
     """Build the form schema shared by the setup step and the options step.
 
@@ -54,6 +64,20 @@ def build_schema(
             }),
             {"collapsed": not use_mock_data},
         ),
+        vol.Required(CONF_ZONE_CONTROL, default={}): section(
+            vol.Schema({
+                vol.Optional(
+                    CONF_PORTAL_USERNAME, default=portal_username
+                ): str,
+                vol.Optional(CONF_PORTAL_PASSWORD): selector.TextSelector(
+                    selector.TextSelectorConfig(
+                        type=selector.TextSelectorType.PASSWORD
+                    )
+                ),
+                vol.Optional(CONF_REMOVE_PORTAL_CREDENTIALS, default=False): bool,
+            }),
+            {"collapsed": not bool(portal_username)},
+        ),
     })
 
 
@@ -61,6 +85,27 @@ def read_use_mock_data(user_input: Dict[str, Any]) -> bool:
     """Read the mock switch out of the developer options section."""
     developer_options = user_input.get(CONF_DEVELOPER_OPTIONS) or {}
     return bool(developer_options.get(CONF_USE_MOCK_DATA, False))
+
+
+def read_zone_control_credentials(
+    user_input: Dict[str, Any], existing: Optional[Dict[str, Any]] = None
+) -> tuple[str, str]:
+    """Read optional portal credentials, retaining an existing password if blank."""
+    control_options = user_input.get(CONF_ZONE_CONTROL) or {}
+    if control_options.get(CONF_REMOVE_PORTAL_CREDENTIALS):
+        return "", ""
+    existing = existing or {}
+    username = str(
+        control_options.get(CONF_PORTAL_USERNAME)
+        or existing.get(CONF_PORTAL_USERNAME)
+        or ""
+    ).strip()
+    password = str(
+        control_options.get(CONF_PORTAL_PASSWORD)
+        or existing.get(CONF_PORTAL_PASSWORD)
+        or ""
+    )
+    return username, password
 
 
 class EpluconConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -75,6 +120,7 @@ class EpluconConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         api_endpoint: str = BASE_URL
         use_mock_data = False
         scan_interval = DEFAULT_SCAN_INTERVAL
+        portal_username = ""
 
         _LOGGER.debug("Starting Eplucon config flow")
 
@@ -84,6 +130,10 @@ class EpluconConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             api_endpoint = user_input[CONF_API_ENDPOINT]
             scan_interval = user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             use_mock_data = read_use_mock_data(user_input)
+            portal_username, portal_password = read_zone_control_credentials(user_input)
+            if bool(portal_username) != bool(portal_password):
+                errors["base"] = "zone-credentials"
+                portal_password = ""
             client = EpluconApi(
                 api_token,
                 api_endpoint,
@@ -92,6 +142,8 @@ class EpluconConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
             try:
+                if errors:
+                    raise _InvalidZoneCredentials
                 devices = await client.get_devices()
 
                 _LOGGER.debug(f"Received the following devices from API: {devices}")
@@ -109,6 +161,14 @@ class EpluconConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_API_ENDPOINT: api_endpoint,
                         CONF_SCAN_INTERVAL: scan_interval,
                         CONF_USE_MOCK_DATA: use_mock_data,
+                        **(
+                            {
+                                CONF_PORTAL_USERNAME: portal_username,
+                                CONF_PORTAL_PASSWORD: portal_password,
+                            }
+                            if portal_username and portal_password
+                            else {}
+                        ),
                     })
 
                 errors["base"] = "no-devices"
@@ -123,6 +183,9 @@ class EpluconConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.info("Failed to fetch devices from Eplucon API")
                 errors["base"] = "api"
 
+            except _InvalidZoneCredentials:
+                pass
+
             except Exception as e:
                 # Handle any other unexpected exceptions
                 _LOGGER.exception("Unexpected exception: %s", e)
@@ -132,7 +195,11 @@ class EpluconConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=build_schema(
-                api_token, api_endpoint, use_mock_data, scan_interval
+                api_token,
+                api_endpoint,
+                use_mock_data,
+                scan_interval,
+                portal_username,
             ),
             errors=errors,
             description_placeholders={"api_tokens_url": EPLUCON_API_TOKENS_URL},
@@ -161,6 +228,7 @@ class EpluconOptionsFlowHandler(config_entries.OptionsFlow):
         api_endpoint = entry_data.get(CONF_API_ENDPOINT, BASE_URL)
         use_mock_data = entry_data.get(CONF_USE_MOCK_DATA, False)
         scan_interval = entry_data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        portal_username = entry_data.get(CONF_PORTAL_USERNAME, "")
 
         if user_input is not None:
             # If the user has provided new data, update the config entry
@@ -168,6 +236,11 @@ class EpluconOptionsFlowHandler(config_entries.OptionsFlow):
             api_endpoint = user_input.get(CONF_API_ENDPOINT, BASE_URL)
             scan_interval = user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             use_mock_data = read_use_mock_data(user_input)
+            portal_username, portal_password = read_zone_control_credentials(
+                user_input, entry_data
+            )
+            if bool(portal_username) != bool(portal_password):
+                errors["base"] = "zone-credentials"
 
             # Revalidate the API token to ensure it's correct
             client = EpluconApi(
@@ -178,6 +251,8 @@ class EpluconOptionsFlowHandler(config_entries.OptionsFlow):
             )
 
             try:
+                if errors:
+                    raise _InvalidZoneCredentials
                 devices = await client.get_devices()
 
                 _LOGGER.info(f"Devices found: {devices}")
@@ -193,16 +268,26 @@ class EpluconOptionsFlowHandler(config_entries.OptionsFlow):
                     # Update the configuration entry with the new API token and devices.
                     # Keep the rest of the entry data: dropping the endpoint or the
                     # mock switch here would silently reset them on every save.
+                    updated_data = {
+                        **entry_data,
+                        CONF_API_TOKEN: api_token,
+                        CONF_API_ENDPOINT: api_endpoint,
+                        CONF_SCAN_INTERVAL: scan_interval,
+                        CONF_USE_MOCK_DATA: use_mock_data,
+                        "devices": devices,
+                    }
+                    if portal_username and portal_password:
+                        updated_data[CONF_PORTAL_USERNAME] = portal_username
+                        updated_data[CONF_PORTAL_PASSWORD] = portal_password
+                    elif (user_input.get(CONF_ZONE_CONTROL) or {}).get(
+                        CONF_REMOVE_PORTAL_CREDENTIALS
+                    ):
+                        updated_data.pop(CONF_PORTAL_USERNAME, None)
+                        updated_data.pop(CONF_PORTAL_PASSWORD, None)
+
                     self.hass.config_entries.async_update_entry(
                         self._config_entry,
-                        data={
-                            **entry_data,
-                            CONF_API_TOKEN: api_token,
-                            CONF_API_ENDPOINT: api_endpoint,
-                            CONF_SCAN_INTERVAL: scan_interval,
-                            CONF_USE_MOCK_DATA: use_mock_data,
-                            "devices": devices,
-                        }
+                        data=updated_data
                     )
                     return self.async_create_entry(title="", data={})
 
@@ -218,6 +303,9 @@ class EpluconOptionsFlowHandler(config_entries.OptionsFlow):
                 _LOGGER.info("Failed to fetch devices from Eplucon API")
                 errors["base"] = "api"
 
+            except _InvalidZoneCredentials:
+                pass
+
             except Exception as e:
                 # Handle any other unexpected exceptions
                 _LOGGER.exception("Unexpected exception: %s", e)
@@ -227,7 +315,11 @@ class EpluconOptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=build_schema(
-                api_token, api_endpoint, use_mock_data, scan_interval
+                api_token,
+                api_endpoint,
+                use_mock_data,
+                scan_interval,
+                portal_username,
             ),
             errors=errors
         )

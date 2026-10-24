@@ -26,6 +26,11 @@ RAW_DATA = {
         "humidity": 69,
     },
     "description": {"name": "Woonkamer"},
+    "mode": {
+        "id": 9012,
+        "parentId": 9010,
+        "mode": "constantTemp",
+    },
 }
 
 ZONE_ITEM = {
@@ -62,6 +67,9 @@ def test_parse_zone_documented_payload():
     assert zone.zone_state == "noAlarm"
     assert zone.relay_state == "on"
     assert zone.algorithm == "cooling"
+    assert zone.control_zone_id == 9010
+    assert zone.parent_id == 9010
+    assert zone.mode_id == 9012
 
 
 @pytest.mark.parametrize(

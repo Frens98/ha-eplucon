@@ -17,6 +17,12 @@ class ZoneDTO:
     set_temperature: Union[float, str, None] = None
     current_temperature: Union[float, str, None] = None
 
+    # Internal identifiers required by the portal's undocumented write route.
+    # The public zone `id` above is a different identifier.
+    control_zone_id: Optional[int] = None
+    parent_id: Optional[int] = None
+    mode_id: Optional[int] = None
+
     # Extracted from raw_data.zone
     humidity: Optional[float] = None
     battery_level: Optional[float] = None

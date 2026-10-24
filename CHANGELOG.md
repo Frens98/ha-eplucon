@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+* Optional climate entities for Eplucon th-TOUCH zones. Sensor-only setups continue to use the API token alone; zone setpoint writes use optional portal credentials, a session cookie, and CSRF handling. The write route is undocumented and sets the zone to `constantTemp` mode.
+
 ## [1.7.0](https://github.com/koenhendriks/ha-eplucon/releases/1.7.0) - 2026-10-21
 
 ### Added

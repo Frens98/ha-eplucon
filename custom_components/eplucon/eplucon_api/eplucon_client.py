@@ -342,6 +342,23 @@ class EpluconApi:
         if not isinstance(z, dict):
             z = {}
 
+        mode_data = parsed.get("mode") if isinstance(parsed, dict) else None
+        if not isinstance(mode_data, dict):
+            mode_data = {}
+
+        try:
+            zone.control_zone_id = int(z["id"]) if z.get("id") is not None else None
+            zone.parent_id = (
+                int(mode_data["parentId"])
+                if mode_data.get("parentId") is not None
+                else None
+            )
+            zone.mode_id = (
+                int(mode_data["id"]) if mode_data.get("id") is not None else None
+            )
+        except (TypeError, ValueError):
+            _LOGGER.debug("Zone %s has unusable control identifiers", zone.id)
+
         flags = z.get("flags")
         if not isinstance(flags, dict):
             flags = {}

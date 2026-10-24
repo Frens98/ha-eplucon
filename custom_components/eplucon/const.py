@@ -30,7 +30,7 @@ from typing import Any
 
 DOMAIN = "eplucon"
 MANUFACTURER = "Eplucon"
-PLATFORMS = ["sensor", "binary_sensor"]
+PLATFORMS = ["sensor", "binary_sensor", "climate"]
 EPLUCON_PORTAL_URL = "https://portaal.eplucon.nl/"
 # Passed to the config flow as a description placeholder; hassfest rejects a
 # URL written inline in strings.json.
@@ -43,6 +43,10 @@ CONF_API_TOKEN = "api_token"
 CONF_API_ENDPOINT = "api_endpoint"
 CONF_DEVELOPER_OPTIONS = "developer_options"
 CONF_USE_MOCK_DATA = "use_mock_data"
+CONF_ZONE_CONTROL = "zone_control"
+CONF_PORTAL_USERNAME = "portal_username"
+CONF_PORTAL_PASSWORD = "portal_password"
+CONF_REMOVE_PORTAL_CREDENTIALS = "remove_portal_credentials"
 
 # Seconds between refreshes. Every refresh costs two portal requests per heat
 # pump and one per zone controller, so the floor stops it hammering the portal.

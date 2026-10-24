@@ -1,13 +1,13 @@
 {
   "domain": "eplucon",
   "name": "Eplucon",
-  "codeowners": ["@koenhendriks"],
+  "codeowners": ["@Frens98"],
   "config_flow": true,
   "dependencies": ["sensor"],
-  "documentation": "https://github.com/koenhendriks/ha-eplucon",
+  "documentation": "https://github.com/Frens98/ha-eplucon",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/koenhendriks/ha-eplucon/issues",
+  "issue_tracker": "https://github.com/Frens98/ha-eplucon/issues",
   "requirements": ["dacite"],
   "single_config_entry": true,
-  "version": "1.7.0"
+  "version": "1.8.0"
 }
